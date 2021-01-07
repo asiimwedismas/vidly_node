@@ -1,3 +1,5 @@
 {
-  "name": "Vidly node - default"
+  "name": "Vidly node - default",
+  "jwtPrivateKey": "",
+  "db": "mongodb://localhost/vidly"
 }
