@@ -23,13 +23,13 @@ const customerSchema = new mongoose.Schema({
 const Customer = mongoose.model('Customer', customerSchema);
 
 function validateCustomer(customer) {
-  const validationSchema = {
+  const validationSchema = Joi.object({
     name: Joi.string().required().min(6).max(16),
     phone: Joi.string().required().min(6).max(16),
     isGold: Joi.boolean(),
-  };
+  });
 
-  return Joi.validate(customer, validationSchema);
+  return validationSchema.validate(customer);
 }
 
 module.exports.customerSchema = customerSchema;
