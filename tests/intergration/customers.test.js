@@ -1,5 +1,6 @@
 const request = require('supertest');
 const {Customer} = require('../../models/customer');
+const {User} = require('../../models/user');
 const mongoose = require('mongoose');
 
 let server;
@@ -123,8 +124,10 @@ describe('/api/customers', function() {
 
     let customerParamsID;
     let testCustomer;
+    let token;
 
     beforeEach(() => {
+      token = new User().generateAuthToken();
       customerParamsID = mongoose.Types.ObjectId();
       testCustomer = {
         name: 'dismas7',
@@ -133,8 +136,19 @@ describe('/api/customers', function() {
     });
 
     const run = async () => {
-      return await request(server).put(`/api/customers/${customerParamsID}`).send(testCustomer);
+      return await request(server).
+          put(`/api/customers/${customerParamsID}`).
+          set('x-auth-token', token).
+          send(testCustomer);
     };
+
+    it('should return 401 if client is not logged in', async () => {
+      token = '';
+
+      const res = await run();
+
+      expect(res.status).toBe(401);
+    });
 
     it('should return 400 if name is less than 6 characters', async () => {
       testCustomer.name = 'a2';
@@ -201,20 +215,30 @@ describe('/api/customers', function() {
   describe('DELETE /:id', function() {
     let customerID;
     let customer;
+    let token;
 
-    const exec = async () => {
-      return await request(server).delete('/api/customers/' + customerID).send();
+    const run = async () => {
+      return await request(server).delete('/api/customers/' + customerID).set('x-auth-token', token).send();
     };
 
     beforeEach(async () => {
+      token = new User().generateAuthToken();
       customer = await new Customer({name: 'dismas', phone: '123456'}).save();
       customerID = customer._id;
+    });
+
+    it('should return 401 if client is not logged in', async () => {
+      token = '';
+
+      const res = await run();
+
+      expect(res.status).toBe(401);
     });
 
     it('should return 404 if id is invalid', async () => {
       customerID = 1;
 
-      const res = await exec();
+      const res = await run();
 
       expect(res.status).toBe(404);
     });
@@ -222,13 +246,13 @@ describe('/api/customers', function() {
     it('should return 404 if no customer with the given id was found', async () => {
       customerID = mongoose.Types.ObjectId();
 
-      const res = await exec();
+      const res = await run();
 
       expect(res.status).toBe(404);
     });
 
     it('should delete the customer if id is valid', async () => {
-      await exec();
+      await run();
 
       const customerInDB = await Customer.findById(customerID);
 
@@ -236,11 +260,11 @@ describe('/api/customers', function() {
     });
 
     it('should return the removed customer', async () => {
-      const res = await exec();
+      const res = await run();
 
       expect(res.body).toHaveProperty('_id', customerID._id.toHexString());
-      expect(res.body).toHaveProperty('name', "dismas");
-      expect(res.body).toHaveProperty('phone', "123456");
+      expect(res.body).toHaveProperty('name', 'dismas');
+      expect(res.body).toHaveProperty('phone', '123456');
     });
   });
 
