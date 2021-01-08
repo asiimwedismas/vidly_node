@@ -6,23 +6,26 @@ const {User} = require('../../models/user');
 
 let server;
 
-const genreRomance = {name: 'Romance'};
-const genreWestern = {name: 'Western'};
-const genreAction = {name: 'Action'};
+const genreRomance = {_id: mongoose.Types.ObjectId(), name: 'Romance'};
+const genreWestern = {_id: mongoose.Types.ObjectId(), name: 'Western'};
+const genreAction = {_id: mongoose.Types.ObjectId(), name: 'Action'};
 
 const movieTerminator = {
+  _id: mongoose.Types.ObjectId(),
   title: 'Terminator',
   genre: genreAction,
   numberInStock: 1,
   dailyRentalRate: 100,
 };
 const movieNoteBook = {
+  _id: mongoose.Types.ObjectId(),
   title: 'NoteBook',
   genre: genreRomance,
   numberInStock: 10,
   dailyRentalRate: 100,
 };
 const movieDjango = {
+  _id: mongoose.Types.ObjectId(),
   title: 'Django',
   genre: genreWestern,
   numberInStock: 100,
@@ -136,7 +139,7 @@ describe('/api/movies', function() {
     });
 
     it('should return 400 if title is more than 50 characters', async () => {
-      movie.title = 'Tttttttttttttttttttttttttttttttttttttttttttttttttsssssss';
+      movie.title = 'Tttttsttttttttttttttttttttttttttttttttttttttttttttsssssss';
 
       const res = await run();
 
@@ -170,9 +173,9 @@ describe('/api/movies', function() {
     it('should save the movie if all required fields are provided', async () => {
       await run();
 
-      const genre = await Movie.find({title: 'Terminator'});
+      const savedMovieInDb = await Movie.find({title: 'Terminator'});
 
-      expect(genre[0]).toMatchObject({title: 'Terminator'});
+      expect(savedMovieInDb[0].title).toBe("Terminator");
     });
 
     it('should return the saved movie', async () => {
@@ -184,9 +187,9 @@ describe('/api/movies', function() {
   });
 
   describe('PUT /:id', () => {
-    let movie, token;
+    let movie, token, movieID = mongoose.Types.ObjectId();
     const run = async () => {
-      return await request(server).post('/api/movies').set('x-auth-token', token).send(movie);
+      return await request(server).put('/api/movies/' + movieID).set('x-auth-token', token).send(movie);
     };
 
     beforeEach(() => {
@@ -197,7 +200,6 @@ describe('/api/movies', function() {
         numberInStock: 1,
         dailyRentalRate: 12,
       };
-
     });
 
     it('should return 401 if client is not logged in', async () => {
@@ -256,29 +258,40 @@ describe('/api/movies', function() {
       expect(res.status).toBe(400);
     });
 
-    it('should update the movie if all required fields are provided', async () => {
-      movie.title = 'TerminatorUpdated';
-      movie.genreId = genreRomance._id;
+    it('should return 404 if movie with id does not exist', async () => {
+      // movie.genreId = mongoose.Types.ObjectId();
 
-      await run();
-
-      const genre = await Movie.find({title: 'TerminatorUpdated'});
-
-      expect(genre).not.toBeNull();
-    });
-
-    it('should return the updated movie', async () => {
-      movie.title = 'TerminatorUpdated';
-      movie.genreId = genreRomance._id;
       const res = await run();
 
-      expect(res.body).toHaveProperty('_id');
-      expect(res.body).toHaveProperty('title', 'TerminatorUpdated');
+      expect(res.status).toBe(404);
+    });
+
+    it('should update the movie and return it if all required fields are provided', async () => {
+
+      const actionMovie = await new Movie({
+        title: 'Action movie',
+        genre: genreAction,
+        numberInStock: 1,
+        dailyRentalRate: 12,
+      }).save();
+
+      movieID = actionMovie._id;
+      movie.title = 'Action movie updated';
+      movie.genreId = genreRomance._id;
+
+      const res = await run();
+
+      const updatedMovieInDb = await Movie.findById(movieID);
+
+      expect(updatedMovieInDb.title).toBe('Action movie updated');
+
+      expect(res.body).toHaveProperty('_id', movieID.toHexString());
+      expect(res.body).toHaveProperty('title', 'Action movie updated');
       expect(res.body.genre._id).toBe(genreRomance._id.toHexString());
       expect(res.body.genre.name).toBe(genreRomance.name);
     });
   });
-
+//
   describe('DELETE /:id', () => {
     let movieID;
     let movie;
