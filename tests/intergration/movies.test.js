@@ -2,6 +2,7 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const {Genre} = require('../../models/genre');
 const {Movie} = require('../../models/movie');
+const {User} = require('../../models/user');
 
 let server;
 
@@ -19,7 +20,7 @@ const movieNoteBook = {
   title: 'NoteBook',
   genre: genreRomance,
   numberInStock: 10,
-  dailyRentalRate: 500,
+  dailyRentalRate: 100,
 };
 const movieDjango = {
   title: 'Django',
@@ -94,19 +95,36 @@ describe('/api/movies', function() {
   });
 
   describe('POST /', () => {
-    let movie;
+    let movie, token;
     const run = async () => {
-      return await request(server).post('/api/movies').send(movie);
+      return await request(server).post('/api/movies').set('x-auth-token', token).send(movie);
     };
 
     beforeEach(() => {
+      token = new User({isAdmin: true}).generateAuthToken();
       movie = {
         title: 'Terminator',
         genreId: genreAction._id,
-        numberInStock:1,
-        dailyRentalRate: 12
+        numberInStock: 1,
+        dailyRentalRate: 12,
       };
 
+    });
+
+    it('should return 401 if client is not logged in', async () => {
+      token = '';
+
+      const res = await run();
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 403 if client is not admin', async () => {
+      token = new User({isAdmin: false}).generateAuthToken();
+
+      const res = await run();
+
+      expect(res.status).toBe(403);
     });
 
     it('should return 400 if title is less than 6 characters', async () => {
@@ -152,9 +170,9 @@ describe('/api/movies', function() {
     it('should save the movie if all required fields are provided', async () => {
       await run();
 
-      const genre = await Movie.find({ title: 'Terminator' });
+      const genre = await Movie.find({title: 'Terminator'});
 
-      expect(genre).not.toBeNull();
+      expect(genre[0]).toMatchObject({title: 'Terminator'});
     });
 
     it('should return the saved movie', async () => {
@@ -166,19 +184,36 @@ describe('/api/movies', function() {
   });
 
   describe('PUT /:id', () => {
-    let movie;
+    let movie, token;
     const run = async () => {
-      return await request(server).post('/api/movies').send(movie);
+      return await request(server).post('/api/movies').set('x-auth-token', token).send(movie);
     };
 
     beforeEach(() => {
+      token = new User({isAdmin: true}).generateAuthToken();
       movie = {
         title: 'Terminator',
         genreId: genreAction._id,
-        numberInStock:1,
-        dailyRentalRate: 12
+        numberInStock: 1,
+        dailyRentalRate: 12,
       };
 
+    });
+
+    it('should return 401 if client is not logged in', async () => {
+      token = '';
+
+      const res = await run();
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 403 if client is not admin', async () => {
+      token = new User({isAdmin: false}).generateAuthToken();
+
+      const res = await run();
+
+      expect(res.status).toBe(403);
     });
 
     it('should return 400 if title is less than 6 characters', async () => {
@@ -227,7 +262,7 @@ describe('/api/movies', function() {
 
       await run();
 
-      const genre = await Movie.find({ title: 'TerminatorUpdated' });
+      const genre = await Movie.find({title: 'TerminatorUpdated'});
 
       expect(genre).not.toBeNull();
     });
@@ -247,20 +282,38 @@ describe('/api/movies', function() {
   describe('DELETE /:id', () => {
     let movieID;
     let movie;
+    let token;
 
-    const exec = async () => {
-      return await request(server).delete('/api/movies/' + movieID).send();
+    const run = async () => {
+      return await request(server).delete('/api/movies/' + movieID).set('x-auth-token', token).send();
     };
 
     beforeEach(async () => {
+      token = new User({isAdmin: true}).generateAuthToken();
       movie = await new Movie(movieTerminator).save();
       movieID = movie._id;
+    });
+
+    it('should return 401 if client is not logged in', async () => {
+      token = '';
+
+      const res = await run();
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 403 if client is not admin', async () => {
+      token = new User({isAdmin: false}).generateAuthToken();
+
+      const res = await run();
+
+      expect(res.status).toBe(403);
     });
 
     it('should return 404 if id is invalid', async () => {
       movieID = 1;
 
-      const res = await exec();
+      const res = await run();
 
       expect(res.status).toBe(404);
     });
@@ -268,13 +321,13 @@ describe('/api/movies', function() {
     it('should return 404 if no movie with the given id was found', async () => {
       movieID = mongoose.Types.ObjectId();
 
-      const res = await exec();
+      const res = await run();
 
       expect(res.status).toBe(404);
     });
 
     it('should delete the movie if id is valid', async () => {
-      await exec();
+      await run();
 
       const movieInDB = await Movie.findById(movieID);
 
@@ -282,10 +335,10 @@ describe('/api/movies', function() {
     });
 
     it('should return the deleted movie', async () => {
-      const res = await exec();
+      const res = await run();
 
       expect(res.body).toHaveProperty('_id', movie._id.toHexString());
-      expect(res.body).toHaveProperty('title', "Terminator");
+      expect(res.body).toHaveProperty('title', 'Terminator');
     });
   });
 });

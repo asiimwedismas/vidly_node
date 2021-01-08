@@ -3,15 +3,15 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const {Movie, validateMovie} = require('../models/movie');
 const {Genre} = require('../models/genre');
+const validateObjectID = require('../middleware/validateMongoObjectID');
+const auth = require('../middleware/auth');
+const admin = require('../middleware/admin');
 
 router.get('/', async function(req, res) {
   res.send(await Movie.find().sort());
 });
 
-router.get('/:id', async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id))
-    return res.status(404).send('Invalid ID.');
-
+router.get('/:id', validateObjectID, async (req, res) => {
   const movie = await Movie.findById(req.params.id);
   if (!movie)
     return res.status(404).send('The movie with the given ID was not found.');
@@ -19,7 +19,7 @@ router.get('/:id', async (req, res) => {
   res.send(movie);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', [auth, admin], async (req, res) => {
   const {error} = validateMovie(req.body);
   if (error)
     return res.status(400).send(error.details[0].message);
@@ -32,17 +32,17 @@ router.post('/', async (req, res) => {
     title: req.body.title,
     genre: {
       _id: genre._id,
-      name: genre.name
+      name: genre.name,
     },
     numberInStock: req.body.numberInStock,
-    dailyRentalRate: req.body.dailyRentalRate
+    dailyRentalRate: req.body.dailyRentalRate,
   });
   await movie.save();
 
   res.send(movie);
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', [auth, admin, validateObjectID], async (req, res) => {
   const {error} = validateMovie(req.body);
   if (error)
     return res.status(400).send(error.details[0].message);
@@ -68,10 +68,7 @@ router.put('/:id', async (req, res) => {
   res.send(movie);
 });
 
-router.delete('/:id', async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id))
-    return res.status(404).send('Invalid ID.');
-
+router.delete('/:id', [auth, admin, validateObjectID], async (req, res) => {
   const movie = await Movie.findByIdAndRemove(req.params.id);
 
   if (!movie)
