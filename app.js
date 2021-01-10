@@ -1,9 +1,9 @@
 const express = require('express');
 const app = express();
 
-require('./bootup/logging')(app);
-require('./bootup/routes')(app);
+require('./bootup/logging')();
+require('./bootup/config')();
 require('./bootup/db')();
-// require('./bootup/config')();
+require('./bootup/routes')(app);
 
 module.exports = app;

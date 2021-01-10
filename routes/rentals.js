@@ -5,6 +5,7 @@ const {Movie} = require('../models/movie');
 const {Customer} = require('../models/customer');
 const mongoose = require('mongoose');
 const validateObjectID = require('../middleware/validateMongoObjectID');
+const validateReqBody = require('../middleware/validateReqBody');
 const auth = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
@@ -15,15 +16,13 @@ router.get('/', async (req, res) => {
 router.get('/:id', validateObjectID, async (req, res) => {
   const rental = await Rental.findById(req.params.id);
 
-  if (!rental) return res.status(404).send('The rental with the given ID was not found.');
+  if (!rental)
+    return res.status(404).send('The rental with the given ID was not found.');
 
   res.send(rental);
 });
 
-router.post('/', auth, async (req, res) => {
-  const {error} = validateRental(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
-
+router.post('/', [auth, validateReqBody(validateRental)], async (req, res) => {
   const customer = await Customer.findById(req.body.customerId);
   if (!customer) return res.status(400).send('Invalid customer.');
 
@@ -44,9 +43,6 @@ router.post('/', auth, async (req, res) => {
       dailyRentalRate: movie.dailyRentalRate,
     },
   });
-
-  // console.log(rental);
-  // console.log(movie);
 
   await rental.save();
   movie.numberInStock--;

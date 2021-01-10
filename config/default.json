@@ -1,5 +1,5 @@
 {
   "name": "Vidly node - default",
-  "jwtPrivateKey": "",
+  "jwtPrivateKey": "asiimwe-dismas",
   "db": "mongodb://localhost/vidly"
 }

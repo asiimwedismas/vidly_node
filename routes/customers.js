@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const {Customer, validateCustomer} = require('../models/customer');
+const validateReqBody = require('../middleware/validateReqBody');
 const validateObjectID = require('../middleware/validateMongoObjectID');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
@@ -19,21 +20,12 @@ router.get('/:id', validateObjectID, async (req, res) => {
   res.send(customer);
 });
 
-router.post('/', async (req, res) => {
-  const {error} = validateCustomer(req.body);
-  if (error)
-    return res.status(400).send(error.details[0].message);
-
-  let customer = new Customer(req.body);
-  customer = await customer.save();
+router.post('/', validateReqBody(validateCustomer), async (req, res) => {
+  const customer = await new Customer(req.body).save();
   res.send(customer);
 });
 
-router.put('/:id', [auth, validateObjectID], async (req, res) => {
-  const {error} = validateCustomer(req.body);
-  if (error)
-    return res.status(400).send(error.details[0].message);
-
+router.put('/:id', [auth, validateObjectID, validateReqBody(validateCustomer)], async (req, res) => {
   let customerID = req.params.id;
   const customer = await Customer.findByIdAndUpdate(
       customerID,
@@ -52,13 +44,12 @@ router.put('/:id', [auth, validateObjectID], async (req, res) => {
 
 router.delete('/:id', [auth, validateObjectID], async (req, res) => {
   const id = req.params.id;
-  const customer = await Customer.findByIdAndRemove(req.params.id);
+  const customer = await Customer.findByIdAndRemove(id);
 
   if (!customer)
-    return res.status(404).send(`No customer with id ${req.params.id}`);
+    return res.status(404).send(`No customer with id ${id}`);
 
   res.send(customer);
-
 });
 
 module.exports = router;

@@ -4,11 +4,12 @@ const mongoose = require('mongoose');
 const {Movie, validateMovie} = require('../models/movie');
 const {Genre} = require('../models/genre');
 const validateObjectID = require('../middleware/validateMongoObjectID');
+const validateReqBody = require('../middleware/validateReqBody');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 
 router.get('/', async function(req, res) {
-  res.send(await Movie.find().sort());
+  res.send(await Movie.find().sort('title'));
 });
 
 router.get('/:id', validateObjectID, async (req, res) => {
@@ -19,11 +20,7 @@ router.get('/:id', validateObjectID, async (req, res) => {
   res.send(movie);
 });
 
-router.post('/', [auth, admin], async (req, res) => {
-  const {error} = validateMovie(req.body);
-  if (error)
-    return res.status(400).send(error.details[0].message);
-
+router.post('/', [auth, admin, validateReqBody(validateMovie)], async (req, res) => {
   const genre = await Genre.findById(req.body.genreId);
   if (!genre)
     return res.status(400).send('Invalid genre.');
@@ -42,24 +39,21 @@ router.post('/', [auth, admin], async (req, res) => {
   res.send(movie);
 });
 
-router.put('/:id', [auth, admin, validateObjectID], async (req, res) => {
-  const {error} = validateMovie(req.body);
-  if (error)
-    return res.status(400).send(error.details[0].message);
-
-  const genre = await Genre.findById(req.body.genreId);
+router.put('/:id', [auth, admin, validateObjectID, validateReqBody(validateMovie)], async (req, res) => {
+  let body = req.body;
+  const genre = await Genre.findById(body.genreId);
   if (!genre)
     return res.status(400).send('Invalid genre.');
 
   const movie = await Movie.findByIdAndUpdate(req.params.id,
       {
-        title: req.body.title,
+        title: body.title,
         genre: {
           _id: genre._id,
           name: genre.name,
         },
-        numberInStock: req.body.numberInStock,
-        dailyRentalRate: req.body.dailyRentalRate,
+        numberInStock: body.numberInStock,
+        dailyRentalRate: body.dailyRentalRate,
       }, {new: true});
 
   if (!movie)

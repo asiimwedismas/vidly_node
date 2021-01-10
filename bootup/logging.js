@@ -1,5 +1,11 @@
-const logger = require('morgan');
+const logger = require('winston');
+require('express-async-errors');
 
-module.exports = function(app) {
-  if (app.get('env') === 'development') app.use(logger('dev'));
-}
+module.exports = function() {
+  let consoleLogOptions = {colorize: true, prettyPrint: true};
+  let fileLogOptions = {filename: 'uncaughtExceptions.log'};
+
+  logger.exceptions.handle(
+      new logger.transports.Console(consoleLogOptions),
+      new logger.transports.File(fileLogOptions));
+};

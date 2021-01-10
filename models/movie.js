@@ -1,7 +1,8 @@
-const Joi = require('joi');
-Joi.objectId = require('joi-objectid')(Joi);
-const mongoose = require('mongoose');
 const {genreSchema} = require('./genre');
+const mongoose = require('mongoose');
+const Joi = require('joi');
+
+Joi.objectId = require('joi-objectid')(Joi);
 
 const movieSchema = new mongoose.Schema({
   title: {
@@ -28,7 +29,7 @@ const movieSchema = new mongoose.Schema({
   },
 });
 
-const Movie = mongoose.model("Movie", movieSchema);
+const Movie = mongoose.model('Movie', movieSchema);
 
 function validateMovie(movie) {
   const validationSchema = Joi.object({
